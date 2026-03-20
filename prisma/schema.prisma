@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/db/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Passenger {
+  
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   @unique
+  createdAt DateTime @default(now())
+
+  rides     Ride[]
+}
+
+model Cab {
+  id              String  @id @default(uuid())
+  plateNumber     String  @unique
+  totalSeats      Int
+  luggageCapacity Int
+  cabType         String  // "sedan" | "suv" | "van"
+
+  driver          Driver?
+  pools           Pool[]
+}
+
+model Driver {
+  id        String   @id @default(uuid())
+  name      String   
+  phone     String   @unique
+  cabId     String   @unique
+  createdAt DateTime @default(now())
+
+  cab       Cab      @relation(fields: [cabId], references: [id])
+  pools     Pool[]
+}
+
+model Pool {
+  id               String   @id @default(uuid())
+  cabId            String
+  driverId         String
+  status           String   @default("forming")
+  totalSeatsUsed   Int      @default(0)
+  totalLuggageUsed Int      @default(0)
+  routeOrder       String   @default("[]")
+  routeDropoffLats String   @default("[]")
+  routeDropoffLngs String   @default("[]")
+  totalRouteDist   Float    @default(0)
+  createdAt        DateTime @default(now())
+
+  cab              Cab      @relation(fields: [cabId], references: [id])
+  driver           Driver   @relation(fields: [driverId], references: [id])
+  rides            Ride[]
+
+  @@index([status, createdAt(sort: Asc)])
+}
+
+model Ride {
+  id               String    @id @default(uuid())
+  passengerId      String 
+  poolId           String?
+  dropoffLat       Float
+  dropoffLng       Float
+  seatsNeeded      Int
+  luggageCount     Int
+  maxDetourPct     Float
+  directDist       Float
+  currentRouteDist Float?
+  fare             Float?
+  dropOrder        Int?
+  status           String    @default("searching")
+  createdAt        DateTime  @default(now())
+
+  passenger        Passenger @relation(fields: [passengerId], references: [id])
+  pool             Pool?     @relation(fields: [poolId], references: [id])
+
+  @@index([poolId]) 
+  @@index([passengerId])
+}
