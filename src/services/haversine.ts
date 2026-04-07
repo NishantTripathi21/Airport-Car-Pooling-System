@@ -1,7 +1,4 @@
 // Haversine formula — calculates straight-line distance between
-// two points on Earth's surface given their lat/lng coordinates.
-// Returns distance in kilometers.
-
 function toRad(deg: number): number {
   return deg * (Math.PI / 180);
 }
@@ -21,5 +18,5 @@ export function haversine(
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
 
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); //km
 }
