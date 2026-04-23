@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { createRide, getRideStatus, cancelRide } from "../services/ride.service.js";
 import { publishRideRequested, publishRideCancelled } from "../queues/ride.publisher.js";
 
+// Request Ride
 
 export async function requestRide(req: Request, res: Response) {
   try {
@@ -29,22 +30,32 @@ export async function requestRide(req: Request, res: Response) {
   }
 }
 
+//Get Ride Status
+
 export async function rideStatus(req: Request, res: Response) {
   try {
-    const { id } = req.params;
+    const id = req.params["id"];
+    if (!id) {
+      res.status(400).json({ error: "Ride ID is required" });
+      return;
+    }
 
     const status = await getRideStatus(id);
-
     res.status(200).json(status);
   } catch (err: any) {
     res.status(404).json({ error: err.message });
   }
 }
 
+// Cancel Ride
 
 export async function cancel(req: Request, res: Response) {
   try {
-    const { id } = req.params;
+    const id = req.params["id"];
+    if (!id) {
+      res.status(400).json({ error: "Ride ID is required" });
+      return;
+    }
 
     const { poolId } = await cancelRide(id);
 
