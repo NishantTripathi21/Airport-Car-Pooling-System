@@ -8,7 +8,14 @@ export async function requestRide(req: Request, res: Response) {
   try {
     const { passengerId, dropoffLat, dropoffLng, seatsNeeded, luggageCount, maxDetourPct } = req.body;
 
-    if (!passengerId || !dropoffLat || !dropoffLng || !seatsNeeded || !luggageCount || !maxDetourPct) {
+    if (
+      !passengerId ||
+      dropoffLat === undefined ||
+      dropoffLng === undefined ||
+      seatsNeeded === undefined ||
+      luggageCount === undefined ||
+      maxDetourPct === undefined
+    ) {
       res.status(400).json({ error: "Missing required fields" });
       return;
     }
