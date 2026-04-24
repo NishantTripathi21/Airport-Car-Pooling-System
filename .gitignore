@@ -1,4 +1,4 @@
 node_modules
 .env
-readme.md
 src/db/prisma-client
+ReadMe
