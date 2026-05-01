@@ -50,8 +50,7 @@ async function getPooledRides(poolId: string): Promise<PooledRide[]> {
     where: { poolId, status: { not: "cancelled" } },
     orderBy: { dropOrder: "asc" },
   });
-
-  return rides
+     return rides
     .filter((r) => r.currentRouteDist !== null && r.dropOrder !== null)
     .map((r) => ({
       id: r.id,
@@ -107,27 +106,43 @@ function findBestInsertionIndex(
       prefixDist + haversine(prevLat, prevLng, newRide.dropoffLat, newRide.dropoffLng);
 
     const dDetour = (dRouteDist - newRide.directDist) / newRide.directDist;
-    if (dDetour > newRide.maxDetourPct / 100) continue;
+
+    console.log(`[heuristic] position ${i}: extraDist=${extraDist.toFixed(3)} dRouteDist=${dRouteDist.toFixed(3)} dDetour=${(dDetour * 100).toFixed(2)}% maxAllowed=${newRide.maxDetourPct}%`);
+
+    if (dDetour > newRide.maxDetourPct / 100) {
+      console.log(`[heuristic] position ${i}: REJECTED — new ride detour too high`);
+      continue;
+    }
 
     let allValid = true;
     for (let j = i; j < existingRides.length; j++) {
       const p = existingRides[j];
-      if(p == undefined)continue;
+      if (p == undefined) continue;
       const simulatedDist = p.currentRouteDist + extraDist;
       const pDetour = (simulatedDist - p.directDist) / p.directDist;
+
+      console.log(`[heuristic] position ${i} passenger ${j}: simulatedDist=${simulatedDist.toFixed(3)} pDetour=${(pDetour * 100).toFixed(2)}% maxAllowed=${p.maxDetourPct}% currentRouteDist=${p.currentRouteDist.toFixed(3)} directDist=${p.directDist.toFixed(3)}`);
+
       if (pDetour > p.maxDetourPct / 100) {
+        console.log(`[heuristic] position ${i}: REJECTED — existing passenger ${j} detour too high`);
         allValid = false;
         break;
       }
     }
 
     if (allValid && extraDist < bestExtraDist) {
+      console.log(`[heuristic] position ${i}: VALID — extraDist=${extraDist.toFixed(3)}`);
       bestIndex = i;
       bestExtraDist = extraDist;
     }
   }
 
-  if (bestIndex === null) return null;
+  if (bestIndex === null) {
+    console.log(`[heuristic] no valid insertion position found`);
+    return null;
+  }
+
+  console.log(`[heuristic] best position: ${bestIndex} extraDist=${bestExtraDist.toFixed(3)}`);
   return { index: bestIndex, extraDist: bestExtraDist };
 }
 
@@ -340,15 +355,20 @@ export async function processRide(rideId: string): Promise<void> {
       const freshResult = findBestInsertionIndex(freshPool, freshRides, rideInput);
 
       if (!freshResult) continue;
-
-      await commitInsertion(
-        freshPool,
-        freshRides,
-        rideInput,
-        freshResult.index,
-        freshResult.extraDist,
-        freshRides.length + 1
-      );
+      try {
+        await commitInsertion(
+          freshPool,
+          freshRides,
+          rideInput,
+          freshResult.index,
+          freshResult.extraDist,
+          freshRides.length + 1
+        );
+        return;
+      } catch (err) {
+        console.error(`[pooling] commitInsertion FAILED:`, err);
+        continue;
+      }
 
       return; // successfully inserted
     } finally {
